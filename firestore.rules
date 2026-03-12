@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "kabirmago@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasOnly(['username', 'bio', 'role', 'createdAt']) &&
+             data.username is string && data.username.size() > 0 && data.username.size() < 50 &&
+             data.bio is string && data.bio.size() < 500 &&
+             data.role in ['user', 'admin'];
+    }
+
+    function isValidLeaderboardEntry(data) {
+      return data.keys().hasAll(['userId', 'author', 'title', 'score', 'constructiveness', 'analysis', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.author is string &&
+             data.title is string && data.title.size() < 200 &&
+             data.score is number && data.score >= 0 && data.score <= 100 &&
+             data.constructiveness is number && data.constructiveness >= 0 && data.constructiveness <= 100;
+    }
+
+    function isValidRecording(data) {
+      return data.keys().hasAll(['userId', 'title', 'type', 'rawData', 'analysis', 'score', 'constructiveness', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() < 200 &&
+             data.type in ['text', 'voice'] &&
+             data.score is number && data.constructiveness is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /leaderboard/{entryId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidLeaderboardEntry(request.resource.data);
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    match /recordings/{recordingId} {
+      allow read, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidRecording(request.resource.data);
+      allow update: if false; // Recordings are immutable for now
+    }
+  }
+}

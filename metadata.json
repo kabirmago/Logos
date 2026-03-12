@@ -1,0 +1,5 @@
+{
+  "name": "Logos: Debate Quality Analyzer",
+  "description": "Analyze the quality of arguments in online debates, detecting fallacies, argument structures, and scoring persuasiveness using Gemini AI.",
+  "requestFramePermissions": ["microphone"]
+}

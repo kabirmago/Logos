@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Extended user information stored in Firestore",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "bio": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "role"]
+    },
+    "LeaderboardEntry": {
+      "title": "Leaderboard Entry",
+      "description": "Publicly shared debate analysis",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "author": { "type": "string" },
+        "title": { "type": "string" },
+        "score": { "type": "number" },
+        "constructiveness": { "type": "number" },
+        "analysis": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "author", "title", "score", "constructiveness", "analysis", "timestamp"]
+    },
+    "PrivateRecording": {
+      "title": "Private Recording",
+      "description": "User's private debate analysis and recordings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "voice"] },
+        "rawData": { "type": "string" },
+        "analysis": { "type": "object" },
+        "score": { "type": "number" },
+        "constructiveness": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "type", "rawData", "analysis", "score", "constructiveness", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/leaderboard/{entryId}": {
+      "schema": "LeaderboardEntry",
+      "description": "Public leaderboard entries"
+    },
+    "/recordings/{recordingId}": {
+      "schema": "PrivateRecording",
+      "description": "Private recordings collection"
+    }
+  }
+}
