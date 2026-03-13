@@ -15,7 +15,7 @@ export const About = () => {
             <User className="w-12 h-12 opacity-20" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tighter uppercase">The Creator</h1>
+            <h1 className="text-3xl font-bold tracking-tighter uppercase">Kabir Mago</h1>
             <p className="font-serif italic text-gray-500">Architect of Logos</p>
           </div>
         </div>
