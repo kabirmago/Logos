@@ -5,6 +5,7 @@ import { open } from "sqlite";
 import path from "path";
 import session from "express-session";
 import bcrypt from "bcryptjs";
+import { GoogleGenAI } from "@google/genai";
 
 let db: any;
 
@@ -63,7 +64,6 @@ async function startServer() {
     console.log("Admin user force seeded with logos2026.");
   } catch (err) {
     console.error("CRITICAL: Database failure:", err);
-    // Fallback to mock if real DB fails, but we really want real DB
   }
 
   console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
@@ -79,7 +79,7 @@ async function startServer() {
     resave: false,
     saveUninitialized: false,
     cookie: { 
-      secure: false, // Set to true if using HTTPS
+      secure: false,
       maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
     }
   }));
@@ -92,6 +92,35 @@ async function startServer() {
     if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
     next();
   };
+
+  // Gemini Analyze Route
+  app.post("/api/analyze", async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text) return res.status(400).json({ error: "No text provided" });
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: `Analyze the following debate text. Identify the structure of arguments (claims, evidence, rebuttals), detect logical fallacies, score the quality of reasoning, and provide a one-sentence constructive feedback for each argument.
+      
+      Also, for each argument, assign a 'vibe' score from 0 to 100, where 0 is extremely toxic, hostile, or aggressive, and 100 is extremely constructive, civil, and respectful.
+      
+      Finally, provide a 'trajectoryInsight' summarizing the emotional flow of the debate (e.g., "Redemption Arc" if it started toxic but became civil, "Entropy Slope" if it started civil but collapsed into insults, or "Steady Progress").
+      
+      Return ONLY valid JSON with this structure: { summary, nodes: [{id, type, text, author, parentId, reasoningScore, vibe, fallacies, feedback}], overallScores: {toxicity, constructiveness, persuasiveness}, trajectoryInsight, bestArguments }
+      
+      Debate Text:
+      ${text}`,
+      });
+
+      const raw = response.text.replace(/```json|```/g, "").trim();
+      res.json(JSON.parse(raw));
+    } catch (e: any) {
+      console.error("Gemini error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // Auth Routes
   app.post("/api/auth/register", async (req, res) => {
@@ -114,13 +143,9 @@ async function startServer() {
   app.post("/api/auth/login", async (req, res) => {
     const { username, password } = req.body;
     const user: any = await db.get("SELECT * FROM users WHERE username = ?", username);
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    if (!user) return res.status(401).json({ error: "Invalid credentials" });
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
+    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
     (req.session as any).userId = user.id;
     res.json({ id: user.id, username: user.username, bio: user.bio, role: user.role });
   });
@@ -276,8 +301,8 @@ async function startServer() {
     res.status(404).json({ error: "API route not found" });
   });
 
-  // Vite middleware for development (forced for preview)
-  if (true) { // process.env.NODE_ENV !== "production"
+  // Vite middleware
+  if (true) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
