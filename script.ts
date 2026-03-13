@@ -6,13 +6,13 @@ import path from "path";
 import session from "express-session";
 import bcrypt from "bcryptjs";
 import { GoogleGenAI } from "@google/genai";
-
+ 
 let db: any;
-
+ 
 async function startServer() {
   const app = express();
   const PORT = 3000;
-
+ 
   console.log("Initializing database...");
   try {
     db = await open({
@@ -20,7 +20,7 @@ async function startServer() {
       driver: sqlite3.Database
     });
     console.log("Database initialized.");
-
+ 
     await db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +30,7 @@ async function startServer() {
         role TEXT DEFAULT 'user',
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
       );
-
+ 
       CREATE TABLE IF NOT EXISTS leaderboard (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         userId INTEGER,
@@ -41,7 +41,7 @@ async function startServer() {
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(userId) REFERENCES users(id)
       );
-
+ 
       CREATE TABLE IF NOT EXISTS private_recordings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         userId INTEGER,
@@ -56,7 +56,7 @@ async function startServer() {
       );
     `);
     console.log("Database schema verified.");
-
+ 
     // Force Seed Admin User
     await db.run("DELETE FROM users WHERE username = 'admin'");
     const hashedPassword = bcrypt.hashSync("logos2026", 10);
@@ -65,14 +65,14 @@ async function startServer() {
   } catch (err) {
     console.error("CRITICAL: Database failure:", err);
   }
-
+ 
   console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
-
+ 
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
-
+ 
   app.use(express.json());
   app.use(session({
     secret: "logos-secret-key",
@@ -83,7 +83,7 @@ async function startServer() {
       maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
     }
   }));
-
+ 
   // Middleware to check admin
   const isAdmin = async (req: any, res: any, next: any) => {
     const userId = req.session.userId;
@@ -92,13 +92,13 @@ async function startServer() {
     if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
     next();
   };
-
+ 
   // Gemini Analyze Route
   app.post("/api/analyze", async (req, res) => {
     try {
       const { text } = req.body;
       if (!text) return res.status(400).json({ error: "No text provided" });
-
+ 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
@@ -113,7 +113,7 @@ async function startServer() {
       Debate Text:
       ${text}`,
       });
-
+ 
       const raw = response.text.replace(/```json|```/g, "").trim();
       res.json(JSON.parse(raw));
     } catch (e: any) {
@@ -121,7 +121,7 @@ async function startServer() {
       res.status(500).json({ error: e.message });
     }
   });
-
+ 
   // Auth Routes
   app.post("/api/auth/register", async (req, res) => {
     const { username, password } = req.body;
@@ -139,7 +139,7 @@ async function startServer() {
       res.status(500).json({ error: "Registration failed" });
     }
   });
-
+ 
   app.post("/api/auth/login", async (req, res) => {
     const { username, password } = req.body;
     const user: any = await db.get("SELECT * FROM users WHERE username = ?", username);
@@ -149,18 +149,18 @@ async function startServer() {
     (req.session as any).userId = user.id;
     res.json({ id: user.id, username: user.username, bio: user.bio, role: user.role });
   });
-
+ 
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
   });
-
+ 
   app.get("/api/auth/me", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
     const user: any = await db.get("SELECT id, username, bio, role FROM users WHERE id = ?", userId);
     res.json(user);
   });
-
+ 
   // Admin Routes
   app.get("/api/admin/stats", isAdmin, async (req, res) => {
     const totalUsers = await db.get("SELECT COUNT(*) as count FROM users");
@@ -175,7 +175,7 @@ async function startServer() {
       ORDER BY l.timestamp DESC 
       LIMIT 5
     `);
-
+ 
     res.json({
       totalUsers: totalUsers.count,
       totalDebates: totalDebates.count,
@@ -184,7 +184,7 @@ async function startServer() {
       recentActivity
     });
   });
-
+ 
   app.patch("/api/auth/profile", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -192,7 +192,7 @@ async function startServer() {
     await db.run("UPDATE users SET bio = ? WHERE id = ?", bio, userId);
     res.json({ success: true });
   });
-
+ 
   // Leaderboard Routes
   app.get("/api/leaderboard", async (req, res) => {
     try {
@@ -208,17 +208,17 @@ async function startServer() {
       res.status(500).json({ error: "Failed to fetch leaderboard" });
     }
   });
-
+ 
   app.get("/api/leaderboard/:id", async (req, res) => {
     const row: any = await db.get("SELECT * FROM leaderboard WHERE id = ?", req.params.id);
     if (!row) return res.status(404).json({ error: "Debate not found" });
     res.json({ ...row, analysis: JSON.parse(row.analysis) });
   });
-
+ 
   app.post("/api/leaderboard", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Log in to publish" });
-
+ 
     try {
       const { title, score, constructiveness, analysis } = req.body;
       const result = await db.run("INSERT INTO leaderboard (userId, title, score, constructiveness, analysis) VALUES (?, ?, ?, ?, ?)",
@@ -228,26 +228,26 @@ async function startServer() {
       res.status(500).json({ error: "Failed to save" });
     }
   });
-
+ 
   app.delete("/api/leaderboard/:id", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
-
+ 
     const debate: any = await db.get("SELECT userId FROM leaderboard WHERE id = ?", req.params.id);
     if (!debate) return res.status(404).json({ error: "Not found" });
     if (debate.userId !== userId) return res.status(403).json({ error: "Not authorized" });
-
+ 
     await db.run("DELETE FROM leaderboard WHERE id = ?", req.params.id);
     res.json({ success: true });
   });
-
+ 
   app.get("/api/users/:username/debates", async (req, res) => {
     const user: any = await db.get("SELECT id FROM users WHERE username = ?", req.params.username);
     if (!user) return res.status(404).json({ error: "User not found" });
     const rows = await db.all("SELECT id, title, score, timestamp FROM leaderboard WHERE userId = ? ORDER BY timestamp DESC", user.id);
     res.json(rows);
   });
-
+ 
   // Private Recordings Routes
   app.get("/api/my-recordings", async (req, res) => {
     const userId = (req.session as any).userId;
@@ -255,7 +255,7 @@ async function startServer() {
     const rows = await db.all("SELECT id, title, type, score, constructiveness, timestamp FROM private_recordings WHERE userId = ? ORDER BY timestamp DESC", userId);
     res.json(rows);
   });
-
+ 
   app.get("/api/my-recordings/:id", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -263,7 +263,7 @@ async function startServer() {
     if (!row) return res.status(404).json({ error: "Recording not found" });
     res.json({ ...row, analysis: row.analysis ? JSON.parse(row.analysis) : null });
   });
-
+ 
   app.post("/api/my-recordings", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -274,33 +274,33 @@ async function startServer() {
     );
     res.json({ id: result.lastID });
   });
-
+ 
   app.post("/api/my-recordings/:id/publish", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
     
     const recording: any = await db.get("SELECT * FROM private_recordings WHERE id = ? AND userId = ?", req.params.id, userId);
     if (!recording) return res.status(404).json({ error: "Recording not found" });
-
+ 
     const result = await db.run(
       "INSERT INTO leaderboard (userId, title, score, constructiveness, analysis) VALUES (?, ?, ?, ?, ?)",
       userId, recording.title, recording.score, recording.constructiveness, recording.analysis
     );
     res.json({ id: result.lastID });
   });
-
+ 
   app.delete("/api/my-recordings/:id", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
     await db.run("DELETE FROM private_recordings WHERE id = ? AND userId = ?", req.params.id, userId);
     res.json({ success: true });
   });
-
+ 
   // API 404 handler
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: "API route not found" });
   });
-
+ 
   // Vite middleware
   if (true) {
     const vite = await createViteServer({
@@ -314,10 +314,10 @@ async function startServer() {
       res.sendFile(path.resolve("dist/index.html"));
     });
   }
-
+ 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
-
+ 
 startServer();
