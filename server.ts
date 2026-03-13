@@ -101,7 +101,7 @@ async function startServer() {
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.0-flash-001",
         contents: `Analyze the following debate text. Identify the structure of arguments (claims, evidence, rebuttals), detect logical fallacies, score the quality of reasoning, and provide a one-sentence constructive feedback for each argument.
       
       Also, for each argument, assign a 'vibe' score from 0 to 100, where 0 is extremely toxic, hostile, or aggressive, and 100 is extremely constructive, civil, and respectful.
