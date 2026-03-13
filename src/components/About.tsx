@@ -24,9 +24,7 @@ export const About = () => {
           <p>
             Logos was built with a single mission: to improve the quality of online discourse through objective, AI-driven analysis. By focusing on the structure of arguments rather than just the sentiment of words, we can better understand how ideas are formed and challenged.
           </p>
-          <p className="text-sm opacity-60 italic">
-            [Creator info will be added here later. This is a placeholder for the developer's biography, vision, and background.]
-          </p>
+        
         </div>
 
         <div className="pt-8 border-t border-black/5 flex gap-6">
