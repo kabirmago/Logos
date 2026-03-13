@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Globe, Github } from 'lucide-react';
+import { User, Mail } from 'lucide-react';
 
 export const About = () => {
   return (
@@ -24,18 +24,11 @@ export const About = () => {
           <p>
             Logos was built with a single mission: to improve the quality of online discourse through objective, AI-driven analysis. By focusing on the structure of arguments rather than just the sentiment of words, we can better understand how ideas are formed and challenged.
           </p>
-        
         </div>
 
         <div className="pt-8 border-t border-black/5 flex gap-6">
-          <a href="#" className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest hover:opacity-50 transition-opacity">
+          <a href="mailto:kabirmago@gmail.com" className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest hover:opacity-50 transition-opacity">
             <Mail className="w-3 h-3" /> Contact
-          </a>
-          <a href="#" className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest hover:opacity-50 transition-opacity">
-            <Github className="w-3 h-3" /> GitHub
-          </a>
-          <a href="#" className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest hover:opacity-50 transition-opacity">
-            <Globe className="w-3 h-3" /> Website
           </a>
         </div>
       </motion.div>
