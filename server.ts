@@ -86,11 +86,11 @@ async function startServer() {
     }
   }));
 
-  // Middleware to check admin
+  // Middleware to check admin - accepts x-admin-username header from Firebase-authed frontend
   const isAdmin = async (req: any, res: any, next: any) => {
-    const userId = req.session.userId;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-    const user: any = await db.get("SELECT role FROM users WHERE id = ?", userId);
+    const username = req.headers['x-admin-username'];
+    if (!username) return res.status(401).json({ error: "Unauthorized" });
+    const user: any = await db.get("SELECT role FROM users WHERE username = ?", username);
     if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
     next();
   };
@@ -320,7 +320,6 @@ ${text}`,
     res.json({ success: true });
   });
 
- 
   // API 404 handler
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: "API route not found" });
