@@ -103,15 +103,17 @@ async function startServer() {
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
         contents: `Analyze the following debate text. Identify the structure of arguments (claims, evidence, rebuttals), detect logical fallacies, score the quality of reasoning, and provide a one-sentence constructive feedback for each argument.
-      
-      Also, for each argument, assign a 'vibe' score from 0 to 100, where 0 is extremely toxic, hostile, or aggressive, and 100 is extremely constructive, civil, and respectful.
-      
-      Finally, provide a 'trajectoryInsight' summarizing the emotional flow of the debate (e.g., "Redemption Arc" if it started toxic but became civil, "Entropy Slope" if it started civil but collapsed into insults, or "Steady Progress").
-      
-      Return ONLY valid JSON with this structure: { summary, nodes: [{id, type, text, author, parentId, reasoningScore, vibe, fallacies, feedback}], overallScores: {toxicity, constructiveness, persuasiveness}, trajectoryInsight, bestArguments }
-      
-      Debate Text:
-      ${text}`,
+ 
+For each argument, assign a 'vibe' score from 0 to 100, where 0 is extremely toxic/hostile and 100 is extremely constructive/civil.
+ 
+For 'trajectoryInsight': provide a SHORT label of exactly 2-4 words describing the emotional arc (e.g., "Steady Progress", "Entropy Slope", "Redemption Arc", "Toxic Spiral", "Civil Exchange"). NEVER write a full sentence - maximum 4 words.
+ 
+For 'bestArguments': REQUIRED - always return an array of exactly the top 3 argument node IDs that have the highest reasoningScore. Never return an empty array.
+ 
+Return ONLY valid JSON: { summary, nodes: [{id, type, text, author, parentId, reasoningScore, vibe, fallacies, feedback}], overallScores: {toxicity, constructiveness, persuasiveness}, trajectoryInsight, bestArguments }
+ 
+Debate Text:
+${text}`,
       });
  
       const raw = response.text.replace(/```json|```/g, "").trim();
