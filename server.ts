@@ -320,10 +320,7 @@ ${text}`,
     res.json({ success: true });
   });
 
-  app.get("/api/make-kabirmago-admin", async (req, res) => {
-  await db.run("UPDATE users SET role = 'admin' WHERE username = 'KabirMago'");
-  res.json({ success: true });
-});
+ 
   // API 404 handler
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: "API route not found" });
