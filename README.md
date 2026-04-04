@@ -96,5 +96,5 @@ This project pushed me across the full stack in ways I hadn't experienced before
 ---
 
 <div align="center">
-Built by <a href="https://github.com/copemaxxing">Kabir</a>
+Built by <a href="https://github.com/kabirmago">Kabir</a>
 </div>
