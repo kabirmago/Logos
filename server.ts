@@ -60,9 +60,14 @@ async function startServer() {
     // Seed KabirMago as admin if not exists
     const existingAdmin = await db.get("SELECT id FROM users WHERE username = 'KabirMago'");
     if (!existingAdmin) {
-      const hashedPassword = bcrypt.hashSync("logos2026", 10);
-      await db.run("INSERT INTO users (username, password, bio, role) VALUES (?, ?, ?, ?)", "KabirMago", hashedPassword, "Admin", "admin");
-      console.log("KabirMago admin user created.");
+      const adminPassword = process.env.ADMIN_SEED_PASSWORD;
+      if (!adminPassword) {
+        console.warn("WARNING: ADMIN_SEED_PASSWORD not set. Skipping admin seed.");
+      } else {
+        const hashedPassword = bcrypt.hashSync(adminPassword, 12);
+        await db.run("INSERT INTO users (username, password, bio, role) VALUES (?, ?, ?, ?)", "KabirMago", hashedPassword, "Admin", "admin");
+        console.log("KabirMago admin user created.");
+      }
     }
   } catch (err) {
     console.error("CRITICAL: Database failure:", err);
@@ -76,21 +81,29 @@ async function startServer() {
   });
 
   app.use(express.json());
+
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret) {
+    throw new Error("CRITICAL: SESSION_SECRET environment variable is not set. App cannot start safely.");
+  }
+
   app.use(session({
-    secret: "logos-secret-key",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-      secure: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
     }
   }));
 
-  // Middleware to check admin - accepts x-admin-username header from Firebase-authed frontend
+  // Middleware to check admin - uses server-side session only (never trust client headers for auth)
   const isAdmin = async (req: any, res: any, next: any) => {
-    const username = req.headers['x-admin-username'];
-    if (!username) return res.status(401).json({ error: "Unauthorized" });
-    const user: any = await db.get("SELECT role FROM users WHERE username = ?", username);
+    const userId = (req.session as any).userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const user: any = await db.get("SELECT role FROM users WHERE id = ?", userId);
     if (user?.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
     next();
   };
@@ -101,7 +114,7 @@ async function startServer() {
       const { text } = req.body;
       if (!text) return res.status(400).json({ error: "No text provided" });
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
         contents: `Analyze the following debate text. Identify the structure of arguments (claims, evidence, rebuttals), detect logical fallacies, score the quality of reasoning, and provide a one-sentence constructive feedback for each argument.
@@ -318,6 +331,72 @@ ${text}`,
   app.delete("/api/admin/leaderboard/:id", isAdmin, async (req, res) => {
     await db.run("DELETE FROM leaderboard WHERE id = ?", req.params.id);
     res.json({ success: true });
+  });
+
+  // Real-time audio analysis route
+  app.post("/api/analyze-realtime", async (req, res) => {
+    try {
+      const { audio, mimeType } = req.body;
+      if (!audio) return res.status(400).json({ error: "No audio provided" });
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite-preview",
+        contents: [{
+          parts: [
+            { inlineData: { data: audio, mimeType: mimeType || 'audio/webm' } },
+            { text: "Analyze the current state of this conversation. Return a JSON object with 'status' (one of 'green', 'yellow', 'red') and 'reason' (max 10 words). Green means constructive, yellow means heated or repetitive, red means aggressive or fallacious." }
+          ]
+        }],
+        config: { responseMimeType: "application/json" }
+      });
+
+      const raw = response.text.replace(/```json|```/g, "").trim();
+      res.json(JSON.parse(raw));
+    } catch (e: any) {
+      console.error("Realtime analysis error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Full voice debate analysis route
+  app.post("/api/analyze-voice", async (req, res) => {
+    try {
+      const { audio, mimeType } = req.body;
+      if (!audio) return res.status(400).json({ error: "No audio provided" });
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-lite-preview",
+        contents: [{
+          parts: [
+            { inlineData: { data: audio, mimeType: mimeType || 'audio/webm' } },
+            { text: `Perform a deep analysis of this debate/conversation.
+1. Identify when speakers switch and name them (e.g. Speaker A, Speaker B or their names if mentioned).
+2. Score persuasiveness (0-100) and constructiveness (0-100).
+3. Detect logical fallacies.
+4. Provide a summary.
+
+Return ONLY valid JSON:
+{
+  "title": "Short descriptive title",
+  "score": number,
+  "constructiveness": number,
+  "fallacies": ["fallacy name", ...],
+  "summary": "string",
+  "speakers": [{ "name": "string", "contribution": "summary of their points", "tone": "string" }]
+}` }
+          ]
+        }],
+        config: { responseMimeType: "application/json" }
+      });
+
+      const raw = response.text.replace(/```json|```/g, "").trim();
+      res.json(JSON.parse(raw));
+    } catch (e: any) {
+      console.error("Voice analysis error:", e.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // API 404 handler
