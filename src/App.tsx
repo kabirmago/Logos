@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { TrendingUp, User as UserIcon, LogIn, ShieldAlert } from 'lucide-react';
+import { TrendingUp, User as UserIcon, LogIn, ShieldAlert, Menu, X } from 'lucide-react';
 import { Home } from './components/Home';
 import { About } from './components/About';
 import { Leaderboard } from './components/Leaderboard';
@@ -23,57 +23,117 @@ function cn(...inputs: ClassValue[]) {
 function Navbar() {
   const location = useLocation();
   const { user, loading } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
   const isActive = (path: string) => location.pathname === path;
 
-  return (
-    <header className="border-b border-[#141414] p-6 bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-      <div className="relative flex items-center justify-center">
+  const navLinks = [
+    { to: '/', label: 'Home' },
+    { to: '/analyze', label: 'Analyze' },
+    { to: '/voice', label: 'Voice' },
+    { to: '/leaderboard', label: 'Leaderboard' },
+    { to: '/about', label: 'About' },
+  ];
 
-        {/* Logo - absolute left */}
-        <Link to="/" className="absolute left-0 flex items-center gap-3 hover:opacity-70 transition-opacity">
-          <div className="w-10 h-10 bg-[#141414] flex items-center justify-center rounded-sm">
-            <TrendingUp className="text-white w-6 h-6" />
+  return (
+    <header className="border-b border-[#141414] bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+      {/* Desktop navbar */}
+      <div className="hidden md:block p-6">
+        <div className="relative flex items-center justify-center">
+          <Link to="/" className="absolute left-0 flex items-center gap-3 hover:opacity-70 transition-opacity">
+            <div className="w-10 h-10 bg-[#141414] flex items-center justify-center rounded-sm">
+              <TrendingUp className="text-white w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tighter uppercase">Logos</h1>
+              <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Reasoning Analyzer</p>
+            </div>
+          </Link>
+
+          <nav className="flex items-center gap-6 text-[11px] font-mono uppercase tracking-widest">
+            {navLinks.map(({ to, label }) => (
+              <Link key={to} to={to} className={cn("hover:opacity-100 transition-opacity", isActive(to) ? "opacity-100 font-bold" : "opacity-50")}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="absolute right-0 flex items-center gap-6">
+            {!loading && (
+              user ? (
+                <div className="flex items-center gap-6">
+                  {user.role === 'admin' && (
+                    <Link to="/admin" className="text-[11px] font-mono uppercase tracking-widest text-rose-600 hover:opacity-70 transition-opacity flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4" /> Admin
+                    </Link>
+                  )}
+                  <Link to="/profile" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest hover:opacity-70 transition-opacity">
+                    <UserIcon className="w-4 h-4" />
+                    <span>{user.username}</span>
+                  </Link>
+                </div>
+              ) : (
+                <Link to="/auth" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest bg-[#141414] text-white px-4 py-2 rounded-sm hover:bg-[#333] transition-colors">
+                  <LogIn className="w-4 h-4" />
+                  <span>Login</span>
+                </Link>
+              )
+            )}
           </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tighter uppercase">Logos</h1>
-            <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Reasoning Analyzer</p>
+        </div>
+      </div>
+
+      {/* Mobile navbar */}
+      <div className="md:hidden px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity" onClick={() => setMenuOpen(false)}>
+          <div className="w-8 h-8 bg-[#141414] flex items-center justify-center rounded-sm">
+            <TrendingUp className="text-white w-4 h-4" />
           </div>
+          <span className="text-sm font-bold tracking-tighter uppercase">Logos</span>
         </Link>
 
-        {/* Nav - truly centered */}
-        <nav className="flex flex-wrap items-center justify-center gap-6 text-[11px] font-mono uppercase tracking-widest">
-          <Link to="/" className={cn("hover:opacity-100 transition-opacity", isActive('/') ? "opacity-100 font-bold" : "opacity-50")}>Home</Link>
-          <Link to="/analyze" className={cn("hover:opacity-100 transition-opacity", isActive('/analyze') ? "opacity-100 font-bold" : "opacity-50")}>Analyze</Link>
-          <Link to="/voice" className={cn("hover:opacity-100 transition-opacity", isActive('/voice') ? "opacity-100 font-bold" : "opacity-50")}>Voice</Link>
-          <Link to="/leaderboard" className={cn("hover:opacity-100 transition-opacity", isActive('/leaderboard') ? "opacity-100 font-bold" : "opacity-50")}>Leaderboard</Link>
-          <Link to="/about" className={cn("hover:opacity-100 transition-opacity", isActive('/about') ? "opacity-100 font-bold" : "opacity-50")}>About</Link>
-        </nav>
-
-        {/* Login - absolute right */}
-        <div className="absolute right-0 flex items-center gap-6">
-          {!loading && (
-            user ? (
-              <div className="flex items-center gap-6">
-                {user.role === 'admin' && (
-                  <Link to="/admin" className="text-[11px] font-mono uppercase tracking-widest text-rose-600 hover:opacity-70 transition-opacity flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4" /> Admin
-                  </Link>
-                )}
-                <Link to="/profile" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest hover:opacity-70 transition-opacity">
-                  <UserIcon className="w-4 h-4" />
-                  <span>{user.username}</span>
-                </Link>
-              </div>
-            ) : (
-              <Link to="/auth" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest bg-[#141414] text-white px-4 py-2 rounded-sm hover:bg-[#333] transition-colors">
-                <LogIn className="w-4 h-4" />
-                <span>Login</span>
-              </Link>
-            )
-          )}
-        </div>
-
+        <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:opacity-70 transition-opacity">
+          {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-[#141414]/10 bg-white/95 backdrop-blur-sm px-4 py-4 flex flex-col gap-4">
+          {navLinks.map(({ to, label }) => (
+            <Link
+              key={to}
+              to={to}
+              onClick={() => setMenuOpen(false)}
+              className={cn("text-[11px] font-mono uppercase tracking-widest transition-opacity", isActive(to) ? "opacity-100 font-bold" : "opacity-50 hover:opacity-100")}
+            >
+              {label}
+            </Link>
+          ))}
+
+          <div className="border-t border-black/5 pt-4">
+            {!loading && (
+              user ? (
+                <div className="flex flex-col gap-3">
+                  {user.role === 'admin' && (
+                    <Link to="/admin" onClick={() => setMenuOpen(false)} className="text-[11px] font-mono uppercase tracking-widest text-rose-600 flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4" /> Admin
+                    </Link>
+                  )}
+                  <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest hover:opacity-70 transition-opacity">
+                    <UserIcon className="w-4 h-4" />
+                    <span>{user.username}</span>
+                  </Link>
+                </div>
+              ) : (
+                <Link to="/auth" onClick={() => setMenuOpen(false)} className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest bg-[#141414] text-white px-4 py-2 rounded-sm hover:bg-[#333] transition-colors">
+                  <LogIn className="w-4 h-4" />
+                  <span>Login</span>
+                </Link>
+              )
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -85,7 +145,7 @@ export default function App() {
         <Router>
           <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
             <Navbar />
-            
+
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/analyze" element={<Analyzer />} />
