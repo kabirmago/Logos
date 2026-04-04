@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef } from 'react';
 import { DebateAnalysis, ArgumentNode, analyzeDebate } from '../services/geminiService';
-import { GoogleGenAI } from "@google/genai";
 import { useAuth } from './AuthContext';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+// NOTE: All Gemini calls go through the backend /api/* routes.
+// The API key is never exposed to the browser.
 
 interface VoiceAnalysisResult {
   title: string;
@@ -147,20 +147,13 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const performRealtimeAnalysis = async (blob: Blob) => {
     try {
       const base64Audio = await blobToBase64(blob);
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          {
-            parts: [
-              { inlineData: { data: base64Audio, mimeType: 'audio/webm' } },
-              { text: "Analyze the current state of this conversation. Return a JSON object with 'status' (one of 'green', 'yellow', 'red') and 'reason' (max 10 words). Green means constructive, yellow means heated or repetitive, red means aggressive or fallacious." }
-            ]
-          }
-        ],
-        config: { responseMimeType: "application/json" }
+      const response = await fetch('/api/analyze-realtime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Audio, mimeType: 'audio/webm' }),
       });
-
-      const data = JSON.parse(response.text);
+      if (!response.ok) return;
+      const data = await response.json();
       setRealtimeStatus(data.status);
       setRealtimeReason(data.reason);
     } catch (err) {
@@ -174,36 +167,14 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const base64Media = await blobToBase64(blob);
       const mimeType = blob.type;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-lite-preview",
-        contents: [
-          {
-            parts: [
-              { inlineData: { data: base64Media, mimeType: mimeType } },
-              { text: `Perform a deep analysis of this debate/conversation. 
-              1. Identify when speakers switch and name them (e.g. Speaker A, Speaker B or their names if mentioned).
-              2. Score persuasiveness (0-100) and constructiveness (0-100).
-              3. Detect logical fallacies.
-              4. Provide a summary.
-              
-              Return a JSON object with this structure:
-              {
-                "title": "Short descriptive title",
-                "score": number,
-                "constructiveness": number,
-                "fallacies": ["fallacy name", ...],
-                "summary": "string",
-                "speakers": [
-                  { "name": "string", "contribution": "summary of their points", "tone": "string" }
-                ]
-              }` }
-            ]
-          }
-        ],
-        config: { responseMimeType: "application/json" }
+      const response = await fetch('/api/analyze-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: base64Media, mimeType }),
       });
+      if (!response.ok) throw new Error('Voice analysis failed');
+      const data = await response.json();
 
-      const data = JSON.parse(response.text);
       setVoiceResult(data);
 
       // Automatically save to private recordings if logged in
