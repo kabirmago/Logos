@@ -65,7 +65,7 @@ For voice debates, Logos records audio directly in the browser, sends it to the 
 **Prerequisites:** Node.js 18+, a Gemini API key (free at [aistudio.google.com](https://aistudio.google.com)), a Firebase project
 
 ```bash
-git clone https://github.com/copemaxxing/Logos
+git clone https://github.com/kabirmago/Logos
 cd Logos
 npm install
 cp .env.example .env.local
