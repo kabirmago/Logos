@@ -26,46 +26,53 @@ function Navbar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="border-b border-[#141414] p-6 flex flex-col md:flex-row justify-between items-center bg-white/50 backdrop-blur-sm sticky top-0 z-50 gap-4">
-      <Link to="/" className="flex items-center gap-3 hover:opacity-70 transition-opacity">
-        <div className="w-10 h-10 bg-[#141414] flex items-center justify-center rounded-sm">
-          <TrendingUp className="text-white w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tighter uppercase">Logos</h1>
-          <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Reasoning Analyzer</p>
-        </div>
-      </Link>
-      
-      <nav className="flex flex-wrap items-center justify-center gap-6 text-[11px] font-mono uppercase tracking-widest">
-        <Link to="/" className={cn("hover:opacity-100 transition-opacity", isActive('/') ? "opacity-100 font-bold" : "opacity-50")}>Home</Link>
-        <Link to="/analyze" className={cn("hover:opacity-100 transition-opacity", isActive('/analyze') ? "opacity-100 font-bold" : "opacity-50")}>Analyze</Link>
-        <Link to="/voice" className={cn("hover:opacity-100 transition-opacity", isActive('/voice') ? "opacity-100 font-bold" : "opacity-50")}>Voice</Link>
-        <Link to="/leaderboard" className={cn("hover:opacity-100 transition-opacity", isActive('/leaderboard') ? "opacity-100 font-bold" : "opacity-50")}>Leaderboard</Link>
-        <Link to="/about" className={cn("hover:opacity-100 transition-opacity", isActive('/about') ? "opacity-100 font-bold" : "opacity-50")}>About</Link>
-      </nav>
+    <header className="border-b border-[#141414] p-6 bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+      <div className="relative flex items-center justify-center">
 
-      <div className="flex items-center gap-6">
-        {!loading && (
-          user ? (
-            <div className="flex items-center gap-6">
-              {user.role === 'admin' && (
-                <Link to="/admin" className="text-[11px] font-mono uppercase tracking-widest text-rose-600 hover:opacity-70 transition-opacity flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" /> Admin
+        {/* Logo - absolute left */}
+        <Link to="/" className="absolute left-0 flex items-center gap-3 hover:opacity-70 transition-opacity">
+          <div className="w-10 h-10 bg-[#141414] flex items-center justify-center rounded-sm">
+            <TrendingUp className="text-white w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tighter uppercase">Logos</h1>
+            <p className="text-[10px] font-mono uppercase opacity-50 tracking-widest">Reasoning Analyzer</p>
+          </div>
+        </Link>
+
+        {/* Nav - truly centered */}
+        <nav className="flex flex-wrap items-center justify-center gap-6 text-[11px] font-mono uppercase tracking-widest">
+          <Link to="/" className={cn("hover:opacity-100 transition-opacity", isActive('/') ? "opacity-100 font-bold" : "opacity-50")}>Home</Link>
+          <Link to="/analyze" className={cn("hover:opacity-100 transition-opacity", isActive('/analyze') ? "opacity-100 font-bold" : "opacity-50")}>Analyze</Link>
+          <Link to="/voice" className={cn("hover:opacity-100 transition-opacity", isActive('/voice') ? "opacity-100 font-bold" : "opacity-50")}>Voice</Link>
+          <Link to="/leaderboard" className={cn("hover:opacity-100 transition-opacity", isActive('/leaderboard') ? "opacity-100 font-bold" : "opacity-50")}>Leaderboard</Link>
+          <Link to="/about" className={cn("hover:opacity-100 transition-opacity", isActive('/about') ? "opacity-100 font-bold" : "opacity-50")}>About</Link>
+        </nav>
+
+        {/* Login - absolute right */}
+        <div className="absolute right-0 flex items-center gap-6">
+          {!loading && (
+            user ? (
+              <div className="flex items-center gap-6">
+                {user.role === 'admin' && (
+                  <Link to="/admin" className="text-[11px] font-mono uppercase tracking-widest text-rose-600 hover:opacity-70 transition-opacity flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4" /> Admin
+                  </Link>
+                )}
+                <Link to="/profile" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest hover:opacity-70 transition-opacity">
+                  <UserIcon className="w-4 h-4" />
+                  <span>{user.username}</span>
                 </Link>
-              )}
-              <Link to="/profile" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest hover:opacity-70 transition-opacity">
-                <UserIcon className="w-4 h-4" />
-                <span>{user.username}</span>
+              </div>
+            ) : (
+              <Link to="/auth" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest bg-[#141414] text-white px-4 py-2 rounded-sm hover:bg-[#333] transition-colors">
+                <LogIn className="w-4 h-4" />
+                <span>Login</span>
               </Link>
-            </div>
-          ) : (
-            <Link to="/auth" className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest bg-[#141414] text-white px-4 py-2 rounded-sm hover:bg-[#333] transition-colors">
-              <LogIn className="w-4 h-4" />
-              <span>Login</span>
-            </Link>
-          )
-        )}
+            )
+          )}
+        </div>
+
       </div>
     </header>
   );
