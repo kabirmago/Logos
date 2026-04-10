@@ -33,7 +33,7 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 - **Private Recordings** — Save analyses privately to your profile.
 - **Admin Dashboard** — Full user and content management.
 
----
+--- 
 
 ## Tech Stack
 
