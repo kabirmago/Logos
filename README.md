@@ -3,7 +3,7 @@
 # Logos
 ### AI-Powered Debate Analysis
 
-**[logos-production-fe34.up.railway.app](logos-production-1d63.up.railway.app/)**
+**[logos-production-1d63.up.railway.app](logos-production-1d63.up.railway.app/)**
 
 *Paste a debate. Understand it.*
 
