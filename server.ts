@@ -6,11 +6,15 @@ import path from "path";
 import session from "express-session";
 import bcrypt from "bcryptjs";
 import { GoogleGenAI } from "@google/genai";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 let db: any;
 
 async function startServer() {
   const app = express();
+  app.use(helmet());
+  app.use(express.json({ limit: "1mb" }));
   const PORT = 3000;
 
   console.log("Initializing database...");
@@ -80,8 +84,6 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  app.use(express.json());
-
   const sessionSecret = process.env.SESSION_SECRET;
   if (!sessionSecret) {
     throw new Error("CRITICAL: SESSION_SECRET environment variable is not set. App cannot start safely.");
@@ -108,8 +110,11 @@ async function startServer() {
     next();
   };
 
+  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+  const analyzeLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
+
   // Gemini Analyze Route
-  app.post("/api/analyze", async (req, res) => {
+  app.post("/api/analyze", analyzeLimiter, async (req, res) => {
     try {
       const { text } = req.body;
       if (!text) return res.status(400).json({ error: "No text provided" });
@@ -157,7 +162,7 @@ ${text}`,
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     const { username, password } = req.body;
     const user: any = await db.get("SELECT * FROM users WHERE username = ?", username);
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
