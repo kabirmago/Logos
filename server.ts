@@ -13,7 +13,29 @@ let db: any;
 
 async function startServer() {
   const app = express();
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: [
+          "'self'",
+          "https://*.googleapis.com",
+          "https://*.firebaseapp.com",
+          "https://*.firebase.com",
+          "https://*.firebaseio.com",
+          "https://identitytoolkit.googleapis.com",
+          "https://securetoken.googleapis.com",
+          "wss://logos-production-1d63.up.railway.app:24678",
+        ],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        fontSrc: ["'self'", "data:"],
+        mediaSrc: ["'self'", "blob:"],
+        workerSrc: ["'self'", "blob:"],
+      },
+    },
+  }));
   app.use(express.json({ limit: "1mb" }));
   const PORT = 3000;
 
@@ -50,7 +72,7 @@ async function startServer() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         userId INTEGER,
         title TEXT,
-        type TEXT, -- 'text' or 'voice'
+        type TEXT,
         rawData TEXT,
         analysis TEXT,
         score REAL,
@@ -61,7 +83,6 @@ async function startServer() {
     `);
     console.log("Database schema verified.");
 
-    // Seed KabirMago as admin if not exists
     const existingAdmin = await db.get("SELECT id FROM users WHERE username = 'KabirMago'");
     if (!existingAdmin) {
       const adminPassword = process.env.ADMIN_SEED_PASSWORD;
@@ -79,7 +100,6 @@ async function startServer() {
 
   console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
 
-  // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
@@ -97,11 +117,10 @@ async function startServer() {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       sameSite: 'lax',
-      maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+      maxAge: 1000 * 60 * 60 * 24 * 7
     }
   }));
 
-  // Middleware to check admin - uses server-side session only (never trust client headers for auth)
   const isAdmin = async (req: any, res: any, next: any) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -113,7 +132,6 @@ async function startServer() {
   const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
   const analyzeLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
 
-  // Gemini Analyze Route
   app.post("/api/analyze", analyzeLimiter, async (req, res) => {
     try {
       const { text } = req.body;
@@ -144,7 +162,6 @@ ${text}`,
     }
   });
 
-  // Auth Routes
   app.post("/api/auth/register", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: "Username and password required" });
@@ -183,7 +200,6 @@ ${text}`,
     res.json(user);
   });
 
-  // Admin Routes
   app.get("/api/admin/stats", isAdmin, async (req, res) => {
     const totalUsers = await db.get("SELECT COUNT(*) as count FROM users");
     const totalDebates = await db.get("SELECT COUNT(*) as count FROM leaderboard");
@@ -215,7 +231,6 @@ ${text}`,
     res.json({ success: true });
   });
 
-  // Leaderboard Routes
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const rows = await db.all(`
@@ -270,7 +285,6 @@ ${text}`,
     res.json(rows);
   });
 
-  // Private Recordings Routes
   app.get("/api/my-recordings", async (req, res) => {
     const userId = (req.session as any).userId;
     if (!userId) return res.status(401).json({ error: "Not logged in" });
@@ -318,13 +332,11 @@ ${text}`,
     res.json({ success: true });
   });
 
-  // Admin - List all users
   app.get("/api/admin/users", isAdmin, async (req, res) => {
     const users = await db.all("SELECT id, username, bio, role, timestamp FROM users ORDER BY timestamp DESC");
     res.json(users);
   });
 
-  // Admin - Get user detail with their debates
   app.get("/api/admin/users/:username", isAdmin, async (req, res) => {
     const user = await db.get("SELECT id, username, bio, role, timestamp FROM users WHERE username = ?", req.params.username);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -332,13 +344,11 @@ ${text}`,
     res.json({ ...user, debates });
   });
 
-  // Admin - Delete any leaderboard entry
   app.delete("/api/admin/leaderboard/:id", isAdmin, async (req, res) => {
     await db.run("DELETE FROM leaderboard WHERE id = ?", req.params.id);
     res.json({ success: true });
   });
 
-  // Real-time audio analysis route
   app.post("/api/analyze-realtime", async (req, res) => {
     try {
       const { audio, mimeType } = req.body;
@@ -364,7 +374,6 @@ ${text}`,
     }
   });
 
-  // Full voice debate analysis route
   app.post("/api/analyze-voice", async (req, res) => {
     try {
       const { audio, mimeType } = req.body;
@@ -404,12 +413,10 @@ Return ONLY valid JSON:
     }
   });
 
-  // API 404 handler
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: "API route not found" });
   });
 
-  // Vite middleware
   if (true) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
