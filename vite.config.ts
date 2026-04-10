@@ -14,7 +14,7 @@ export default defineConfig(({mode}) => {
     },
     server: {
   hmr: process.env.DISABLE_HMR !== 'true',
-  allowedHosts: ['logos-production-fe34.up.railway.app'],
+  allowedHosts: ['logos-production-1d63.up.railway.app'],
 },
   };
 });
