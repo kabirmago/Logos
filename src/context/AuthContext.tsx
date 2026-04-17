@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   updateProfile as firebaseUpdateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { usePostHog } from '@posthog/react';
 
 interface User {
   id: string;
@@ -30,6 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const posthog = usePostHog();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -63,6 +65,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+      posthog?.identify(firebaseUser.uid);
+      posthog?.capture('user_logged_in');
+    }
   };
 
   const register = async (email: string, password: string, username: string) => {
@@ -85,9 +92,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     setUser(userData);
+    posthog?.identify(firebaseUser.uid, { username });
+    posthog?.capture('user_registered');
   };
 
   const logout = async () => {
+    posthog?.capture('user_logged_out');
+    posthog?.reset();
     await signOut(auth);
     window.location.href = '/';
   };

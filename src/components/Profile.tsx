@@ -5,9 +5,11 @@ import { User, Edit3, Trash2, ExternalLink, Loader2, MessageSquare } from 'lucid
 import { Link } from 'react-router-dom';
 import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { usePostHog } from '@posthog/react';
 
 export const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
+  const posthog = usePostHog();
   const [bio, setBio] = useState(user?.bio || '');
   const [isEditing, setIsEditing] = useState(false);
   const [debates, setDebates] = useState<any[]>([]);
@@ -49,6 +51,7 @@ export const Profile = () => {
   const handleUpdateBio = async () => {
     await updateProfile(bio);
     setIsEditing(false);
+    posthog?.capture('profile_bio_updated', { bio_length: bio.length });
   };
 
   const handleDeleteDebate = async (id: string) => {
@@ -56,6 +59,7 @@ export const Profile = () => {
     try {
       await deleteDoc(doc(db, 'leaderboard', id));
       setDebates(prev => prev.filter(d => d.id !== id));
+      posthog?.capture('leaderboard_debate_deleted');
     } catch (err) {
       console.error('Delete failed', err);
     }
@@ -66,6 +70,7 @@ export const Profile = () => {
     try {
       await deleteDoc(doc(db, 'recordings', id));
       setRecordings(prev => prev.filter(r => r.id !== id));
+      posthog?.capture('recording_deleted');
     } catch (err) {
       console.error('Delete failed', err);
     }

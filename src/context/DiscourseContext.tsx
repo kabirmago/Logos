@@ -3,6 +3,7 @@ import { DebateAnalysis, ArgumentNode, analyzeDebate } from '../services/geminiS
 import { useAuth } from './AuthContext';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { usePostHog } from '@posthog/react';
 
 // NOTE: All Gemini calls go through the backend /api/* routes.
 // The API key is never exposed to the browser.
@@ -48,6 +49,7 @@ const DiscourseContext = createContext<DiscourseContextType | undefined>(undefin
 
 export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const posthog = usePostHog();
 
   // Text Analyzer State
   const [inputText, setInputText] = useState('');
@@ -76,10 +78,19 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!inputText.trim()) return;
     setIsAnalyzing(true);
     setIsPublished(false);
+    posthog?.capture('debate_analysis_started', { text_length: inputText.length, is_logged_in: !!user });
     try {
-      const result = await analyzeDebate(inputText);
+      const distinctId = posthog?.get_distinct_id();
+      const result = await analyzeDebate(inputText, distinctId);
       setAnalysis(result);
       setSelectedNode(null);
+      posthog?.capture('debate_analysis_completed', {
+        toxicity_score: result.overallScores.toxicity,
+        constructiveness_score: result.overallScores.constructiveness,
+        persuasiveness_score: result.overallScores.persuasiveness,
+        node_count: result.nodes.length,
+        trajectory_insight: result.trajectoryInsight,
+      });
 
       // Automatically save to private recordings if logged in
       if (user) {
@@ -95,6 +106,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
     } catch (error) {
+      posthog?.captureException(error);
       console.error('Analysis failed:', error);
       alert('Failed to analyze debate. Please try again.');
     } finally {
@@ -116,7 +128,12 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         timestamp: serverTimestamp()
       });
       setIsPublished(true);
+      posthog?.capture('debate_published_to_leaderboard', {
+        persuasiveness_score: analysis.overallScores.persuasiveness,
+        constructiveness_score: analysis.overallScores.constructiveness,
+      });
     } catch (err) {
+      posthog?.captureException(err);
       console.error('Failed to publish', err);
     } finally {
       setIsPublishing(false);
@@ -166,16 +183,25 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const base64Media = await blobToBase64(blob);
       const mimeType = blob.type;
+      const distinctId = posthog?.get_distinct_id();
+      const voiceHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (distinctId) voiceHeaders['X-POSTHOG-DISTINCT-ID'] = distinctId;
 
       const response = await fetch('/api/analyze-voice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: voiceHeaders,
         body: JSON.stringify({ audio: base64Media, mimeType }),
       });
       if (!response.ok) throw new Error('Voice analysis failed');
       const data = await response.json();
 
       setVoiceResult(data);
+      posthog?.capture('voice_analysis_completed', {
+        persuasiveness_score: data.score,
+        constructiveness_score: data.constructiveness,
+        speaker_count: data.speakers?.length ?? 0,
+        fallacy_count: data.fallacies?.length ?? 0,
+      });
 
       // Automatically save to private recordings if logged in
       if (user) {
@@ -191,6 +217,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
       }
     } catch (err) {
+      posthog?.captureException(err);
       setVoiceError('Analysis failed. The media might be too short or unclear.');
       console.error(err);
     } finally {
@@ -222,6 +249,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setRecordingTime(0);
       setVoiceResult(null);
       setVoiceError(null);
+      posthog?.capture('voice_recording_started');
 
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
@@ -246,6 +274,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setStream(null);
       setIsRecording(false);
+      posthog?.capture('voice_recording_stopped', { recording_duration_seconds: recordingTime });
       if (timerRef.current) clearInterval(timerRef.current);
       if (realtimeTimerRef.current) clearInterval(realtimeTimerRef.current);
     }
