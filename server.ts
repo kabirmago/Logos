@@ -19,7 +19,7 @@ async function startServer() {
           "https://*.firebaseio.com",
           "https://identitytoolkit.googleapis.com",
           "https://securetoken.googleapis.com",
-          "wss://logos-production-1d63.up.railway.app:24678",
+          "https://logosapp.me",
         ],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
