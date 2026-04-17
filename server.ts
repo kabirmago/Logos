@@ -40,6 +40,7 @@ async function startServer() {
   });
 
   const analyzeLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
+  const realtimeLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
 
   app.post("/api/analyze", analyzeLimiter, async (req, res) => {
     try {
@@ -67,11 +68,11 @@ ${text}`,
       res.json(JSON.parse(raw));
     } catch (e: any) {
       console.error("Gemini error:", e.message);
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: "Analysis failed. Please try again." });
     }
   });
 
-  app.post("/api/analyze-realtime", async (req, res) => {
+  app.post("/api/analyze-realtime", realtimeLimiter, async (req, res) => {
     try {
       const { audio, mimeType } = req.body;
       if (!audio) return res.status(400).json({ error: "No audio provided" });
@@ -92,11 +93,11 @@ ${text}`,
       res.json(JSON.parse(raw));
     } catch (e: any) {
       console.error("Realtime analysis error:", e.message);
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: "Realtime analysis failed. Please try again." });
     }
   });
 
-  app.post("/api/analyze-voice", async (req, res) => {
+  app.post("/api/analyze-voice", analyzeLimiter, async (req, res) => {
     try {
       const { audio, mimeType } = req.body;
       if (!audio) return res.status(400).json({ error: "No audio provided" });
@@ -131,7 +132,7 @@ Return ONLY valid JSON:
       res.json(JSON.parse(raw));
     } catch (e: any) {
       console.error("Voice analysis error:", e.message);
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: "Voice analysis failed. Please try again." });
     }
   });
 
