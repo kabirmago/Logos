@@ -1,15 +1,9 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { GoogleGenAI } from "@posthog/ai";
+import { GoogleGenAI } from "@google/genai";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { PostHog } from "posthog-node";
-
-const posthog = new PostHog(process.env.POSTHOG_TOKEN!, {
-  host: process.env.POSTHOG_HOST || "https://us.i.posthog.com",
-  enableExceptionAutocapture: true,
-});
 
 async function startServer() {
   const app = express();
@@ -26,8 +20,6 @@ async function startServer() {
           "https://identitytoolkit.googleapis.com",
           "https://securetoken.googleapis.com",
           "https://logosapp.me",
-          "https://*.i.posthog.com",
-          "https://*.posthog.com",
         ],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
@@ -54,12 +46,9 @@ async function startServer() {
       const { text } = req.body;
       if (!text) return res.status(400).json({ error: "No text provided" });
 
-      const distinctId = (req.headers["x-posthog-distinct-id"] as string) || "anonymous";
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY!, posthog: posthog });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
-        posthogDistinctId: distinctId,
-        posthogProperties: { feature: "text_analysis" },
         contents: `Analyze the following debate text. Identify the structure of arguments (claims, evidence, rebuttals), detect logical fallacies, score the quality of reasoning, and provide a one-sentence constructive feedback for each argument.
 
 For each argument, assign a 'vibe' score from 0 to 100, where 0 is extremely toxic/hostile and 100 is extremely constructive/civil.
@@ -75,21 +64,8 @@ ${text}`,
       });
 
       const raw = response.text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(raw);
-      posthog.capture({
-        distinctId,
-        event: "api_text_analysis_completed",
-        properties: {
-          text_length: text.length,
-          node_count: parsed.nodes?.length ?? 0,
-          toxicity_score: parsed.overallScores?.toxicity,
-          constructiveness_score: parsed.overallScores?.constructiveness,
-          persuasiveness_score: parsed.overallScores?.persuasiveness,
-        },
-      });
-      res.json(parsed);
+      res.json(JSON.parse(raw));
     } catch (e: any) {
-      posthog.captureException(e, (req.headers["x-posthog-distinct-id"] as string) || "anonymous");
       console.error("Gemini error:", e.message);
       res.status(500).json({ error: e.message });
     }
@@ -100,12 +76,9 @@ ${text}`,
       const { audio, mimeType } = req.body;
       if (!audio) return res.status(400).json({ error: "No audio provided" });
 
-      const realtimeDistinctId = (req.headers["x-posthog-distinct-id"] as string) || "anonymous";
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY!, posthog: posthog });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
-        posthogDistinctId: realtimeDistinctId,
-        posthogProperties: { feature: "realtime_analysis" },
         contents: [{
           parts: [
             { inlineData: { data: audio, mimeType: mimeType || 'audio/webm' } },
@@ -124,15 +97,13 @@ ${text}`,
   });
 
   app.post("/api/analyze-voice", async (req, res) => {
-    const voiceDistinctId = (req.headers["x-posthog-distinct-id"] as string) || "anonymous";
     try {
       const { audio, mimeType } = req.body;
       if (!audio) return res.status(400).json({ error: "No audio provided" });
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY!, posthog: posthog });
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-3.1-flash-lite-preview",
-        posthogDistinctId: voiceDistinctId,
-        posthogProperties: { feature: "voice_analysis" },
         contents: [{
           parts: [
             { inlineData: { data: audio, mimeType: mimeType || 'audio/webm' } },
@@ -157,20 +128,8 @@ Return ONLY valid JSON:
       });
 
       const raw = response.text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(raw);
-      posthog.capture({
-        distinctId: voiceDistinctId,
-        event: "api_voice_analysis_completed",
-        properties: {
-          persuasiveness_score: parsed.score,
-          constructiveness_score: parsed.constructiveness,
-          speaker_count: parsed.speakers?.length ?? 0,
-          fallacy_count: parsed.fallacies?.length ?? 0,
-        },
-      });
-      res.json(parsed);
+      res.json(JSON.parse(raw));
     } catch (e: any) {
-      posthog.captureException(e, voiceDistinctId);
       console.error("Voice analysis error:", e.message);
       res.status(500).json({ error: e.message });
     }

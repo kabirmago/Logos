@@ -29,12 +29,10 @@ export interface DebateAnalysis {
   title?: string;
 }
 
-export async function analyzeDebate(text: string, distinctId?: string): Promise<DebateAnalysis> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (distinctId) headers['X-POSTHOG-DISTINCT-ID'] = distinctId;
+export async function analyzeDebate(text: string): Promise<DebateAnalysis> {
   const response = await fetch('/api/analyze', {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
   if (!response.ok) {
