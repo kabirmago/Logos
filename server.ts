@@ -4,32 +4,56 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import crypto from "crypto";
 
 async function startServer() {
   const app = express();
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        connectSrc: [
-          "'self'",
-          "https://*.googleapis.com",
-          "https://*.firebaseapp.com",
-          "https://*.firebase.com",
-          "https://*.firebaseio.com",
-          "https://identitytoolkit.googleapis.com",
-          "https://securetoken.googleapis.com",
-          "https://logosapp.me",
-        ],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:"],
-        fontSrc: ["'self'", "data:"],
-        mediaSrc: ["'self'", "blob:"],
-        workerSrc: ["'self'", "blob:"],
+
+  // Generate a fresh nonce per request for inline scripts (if any)
+  app.use((req, res, next) => {
+    res.locals.nonce = crypto.randomBytes(16).toString("base64");
+    next();
+  });
+
+  app.use((req, res, next) => {
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          connectSrc: [
+            "'self'",
+            "https://*.googleapis.com",
+            "https://*.firebaseapp.com",
+            "https://*.firebase.com",
+            "https://*.firebaseio.com",
+            "https://identitytoolkit.googleapis.com",
+            "https://securetoken.googleapis.com",
+            "https://logosapp.me",
+          ],
+          // Removed 'unsafe-inline' and 'unsafe-eval' — not needed in prod Vite build
+          scriptSrc: [
+            "'self'",
+            `'nonce-${res.locals.nonce}'`,
+          ],
+          styleSrc: ["'self'", "'unsafe-inline'"], // inline styles are lower risk, needed for React
+          imgSrc: ["'self'", "data:", "blob:"],
+          fontSrc: ["'self'", "data:"],
+          mediaSrc: ["'self'", "blob:"],
+          workerSrc: ["'self'", "blob:"],
+          objectSrc: ["'none'"],              // block Flash/plugins entirely
+          baseUri: ["'self'"],               // prevent base tag injection
+          frameAncestors: ["'none'"],        // prevent clickjacking (replaces X-Frame-Options)
+          upgradeInsecureRequests: [],       // auto-upgrade http → https
+        },
       },
-    },
-  }));
+      // HSTS: 1 year + preload (submit to hstspreload.org for A+)
+      strictTransportSecurity: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    })(req, res, next);
+  });
   app.use(express.json({ limit: "1mb" }));
   const PORT = 3000;
 
