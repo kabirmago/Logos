@@ -39,7 +39,7 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 | Backend | Node.js, Express, TypeScript (`tsx`) |
 | Database | SQLite (`better-sqlite3`) |
 | Auth | Firebase Authentication + `express-session` + `bcryptjs` |
-| AI | Google GenAI SDK (`@google/genai`) — Gemini Flash Lite |
+| AI | Google GenAI SDK (`@google/genai`) — Gemini 3.1 Flash Lite Preview |
 | Visualization | D3.js, Recharts, Framer Motion |
 | Security | `helmet` (CSP, HSTS), `express-rate-limit` |
 | Deployment | Railway → [logosapp.me](https://logosapp.me/) |
