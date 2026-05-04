@@ -38,7 +38,7 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 | Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
 | Backend | Node.js, Express, TypeScript (`tsx`) |
 | Database | Firebase Firestore |
-| Auth | Firebase Authentication + `express-session` + `bcryptjs` |
+| Auth | Firebase Authentication |
 | AI | Google GenAI SDK (`@google/genai`) — Gemini 3.1 Flash Lite Preview |
 | Visualization | D3.js, Recharts, Framer Motion |
 | Security | `helmet` (CSP, HSTS), `express-rate-limit` |
