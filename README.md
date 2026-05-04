@@ -13,9 +13,7 @@
 
 ## What is Logos?
 
-Logos is a full-stack web application that uses AI to analyze the structure, quality, and tone of arguments in real debates. Paste in a Reddit thread, a forum argument, or a transcript — Logos maps every claim, rebuttal, and piece of evidence into an interactive graph, scores the reasoning quality of each argument, detects logical fallacies, and tracks how the emotional tone escalates (or doesn't) over the course of the exchange.
-
-It also supports live voice debates: record two people arguing in real-time and Logos performs speaker diarization, identifies who said what, and scores each participant's constructiveness and persuasiveness.
+Logos is a full-stack web application that uses AI to analyze the structure, quality, and tone of arguments in real debates. Paste in a Reddit thread, a forum argument, or a transcript — Logos maps every claim, rebuttal, and piece of evidence into an interactive graph, scores the reasoning quality of each argument, detects logical fallacies, and tracks how the emotional tone evolves over the course of the exchange.
 
 I built this because I'm part of a discourse and debate club and wanted a tool that gave structured, objective feedback on arguments — not just "you were wrong," but *why* and *how* the reasoning broke down.
 
@@ -28,24 +26,23 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 - **Fallacy Detection** — Automatically identifies named logical fallacies (ad hominem, straw man, false dichotomy, etc.) within each argument.
 - **Escalation Trajectory** — Tracks how the emotional tone of a debate evolves over time, with a 2–4 word arc label (e.g. "Toxic Spiral", "Redemption Arc", "Civil Exchange").
 - **Top Arguments** — Surfaces the three highest-scoring arguments in any debate.
-- **Voice Debate Mode** — Record live audio, get full speaker diarization and per-speaker analysis.
 - **Leaderboard** — Publish your best debate analyses publicly and compete on reasoning quality scores.
 - **Private Recordings** — Save analyses privately to your profile.
-- **Admin Dashboard** — Full user and content management.
 
---- 
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS |
-| Backend | Node.js, Express, TypeScript |
-| Database | SQLite (via better-sqlite3) + Firebase Firestore |
-| Auth | Firebase Authentication |
-| AI | Google Gemini 3.1 Flash-Lite (via Gemini API) |
+| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
+| Backend | Node.js, Express, TypeScript (`tsx`) |
+| Database | SQLite (`better-sqlite3`) |
+| Auth | Firebase Authentication + `express-session` + `bcryptjs` |
+| AI | Google GenAI SDK (`@google/genai`) — Gemini Flash Lite |
 | Visualization | D3.js, Recharts, Framer Motion |
-| Deployment | Railway |
+| Security | `helmet` (CSP, HSTS), `express-rate-limit` |
+| Deployment | Railway → [logosapp.me](https://logosapp.me/) |
 
 ---
 
@@ -55,8 +52,6 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 2. **Gemini** parses the full exchange, identifies individual arguments, maps their relationships (which claims are being rebutted, what evidence supports what), and scores each one
 3. **Logos** renders the structure as an interactive node graph and surfaces key insights: top reasoning, fallacies detected, emotional arc
 4. **Optionally publish** your analysis to the public leaderboard
-
-For voice debates, Logos records audio directly in the browser, sends it to the backend, and Gemini performs diarization (speaker identification) and full analysis on the complete recording.
 
 ---
 
@@ -73,6 +68,16 @@ cp .env.example .env.local
 npm run dev
 ```
 
+### Environment Variables
+
+See `.env.example` for the full list. Key ones:
+
+| Variable | Description |
+|---|---|
+| `GEMINI_API_KEY` | From [aistudio.google.com](https://aistudio.google.com/app/apikey) |
+| `SESSION_SECRET` | Long random string — `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `VITE_FIREBASE_*` | Firebase project config (must be prefixed `VITE_` for Vite to expose to the browser) |
+
 ---
 
 ## What I Learned
@@ -82,7 +87,7 @@ This project pushed me across the full stack in ways I hadn't experienced before
 - **Prompt engineering is its own discipline.** Getting Gemini to return consistent, parseable JSON with the exact schema I needed — especially for edge cases like very short debates or single-speaker monologues — took significant iteration.
 - **Security isn't an afterthought.** Early versions had the Gemini API key exposed in the browser bundle and used a hardcoded session secret. Fixing this meant understanding the difference between server-side and client-side code, environment variables, and how Vite's `VITE_` prefix works.
 - **D3 and React don't always play nicely.** Managing D3's imperative DOM manipulation inside React's declarative rendering model required careful use of refs and effect cleanup.
-- **Deploying is different from running locally.** Railway, environment variables, production vs. development modes, Docker build caching — none of this is covered in tutorials.
+- **Deploying is different from running locally.** Railway, environment variables, production vs. development modes, build caching — none of this is covered in tutorials.
 
 ---
 
