@@ -107,6 +107,8 @@ async function startServer() {
       Also, for each argument, assign a 'vibe' score from 0 to 100, where 0 is extremely toxic, hostile, or aggressive, and 100 is extremely constructive, civil, and respectful.
       
       Finally, provide a 'trajectoryInsight' summarizing the emotional flow of the debate (e.g., "Redemption Arc" if it started toxic but became civil, "Entropy Slope" if it started civil but collapsed into insults, or "Steady Progress").
+
+      IMPORTANT: Extract as many individual reasoning items as possible — aim for at least 10 distinct nodes if the debate contains enough content. Each distinct claim, piece of evidence, rebuttal, or concession should be its own node. Do not merge arguments together. If the debate has fewer than 10 distinct arguments, extract all that exist and note this is a short or low-content debate.
       
       Return ONLY valid JSON with this structure: { summary, nodes: [{id, type, text, author, parentId, reasoningScore, vibe, fallacies, feedback}], overallScores: {toxicity, constructiveness, persuasiveness}, trajectoryInsight, bestArguments }
       
