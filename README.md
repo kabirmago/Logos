@@ -28,6 +28,7 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 - **Top Arguments** — Surfaces the three highest-scoring arguments in any debate.
 - **Leaderboard** — Publish your best debate analyses publicly and compete on reasoning quality scores.
 - **Private Recordings** — Save analyses privately to your profile.
+- **Shareable Links** — Every analysis gets a public `/analysis/:id` link with a rich Open Graph preview, so a shared URL renders a branded card in iMessage, Twitter, and LinkedIn. Shared analyses are viewable without an account.
 
 ---
 
@@ -51,7 +52,7 @@ I built this because I'm part of a discourse and debate club and wanted a tool t
 1. **Paste** a debate transcript, Reddit thread, or any text with multiple speakers arguing a position
 2. **Gemini** parses the full exchange, identifies individual arguments, maps their relationships (which claims are being rebutted, what evidence supports what), and scores each one
 3. **Logos** renders the structure as an interactive node graph and surfaces key insights: top reasoning, fallacies detected, emotional arc
-4. **Optionally publish** your analysis to the public leaderboard
+4. **Optionally publish** your analysis to the public leaderboard, or **copy a share link** that anyone can open — no account required
 
 ---
 
@@ -94,7 +95,7 @@ This project pushed me across the full stack in ways I hadn't experienced before
 ## Roadmap
 
 - [ ] Real-time multiplayer debate mode (two users debate live with WebSocket scoring)
-- [ ] Shareable debate links with Open Graph previews
+- [x] Shareable debate links with Open Graph previews
 - [ ] Argument improvement suggestions ("here's how to make this rebuttal stronger")
 - [ ] Export analysis as PDF
 
