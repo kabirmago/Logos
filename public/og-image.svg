@@ -1,0 +1,32 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#E4E3E0"/>
+  <rect x="64" y="64" width="1072" height="502" fill="#141414" rx="6"/>
+
+  <!-- Logo mark -->
+  <rect x="112" y="120" width="64" height="64" rx="4" fill="#E4E3E0"/>
+  <path d="M132 164 L144 140 L156 152 L168 128" stroke="#141414" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Wordmark -->
+  <text x="196" y="150" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="58" fill="#E4E3E0">Logos</text>
+  <text x="198" y="178" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="13" fill="#E4E3E0" opacity="0.45" letter-spacing="7">REASONING ANALYZER</text>
+
+  <line x1="112" y1="232" x2="560" y2="232" stroke="#E4E3E0" stroke-opacity="0.15" stroke-width="1"/>
+
+  <!-- Headline -->
+  <text x="112" y="320" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="44" fill="#E4E3E0">Debate Analysis</text>
+  <text x="112" y="372" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#E4E3E0" opacity="0.6">Argument structure · Logical fallacies · Reasoning scores</text>
+
+  <text x="112" y="496" font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-size="16" fill="#E4E3E0" opacity="0.5" letter-spacing="2">logosapp.me</text>
+
+  <!-- Decorative score bars -->
+  <rect x="760" y="300" width="320" height="6" rx="3" fill="#E4E3E0" opacity="0.08"/>
+  <rect x="760" y="300" width="248" height="6" rx="3" fill="#10b981"/>
+  <rect x="760" y="332" width="320" height="6" rx="3" fill="#E4E3E0" opacity="0.08"/>
+  <rect x="760" y="332" width="182" height="6" rx="3" fill="#84cc16"/>
+  <rect x="760" y="364" width="320" height="6" rx="3" fill="#E4E3E0" opacity="0.08"/>
+  <rect x="760" y="364" width="268" height="6" rx="3" fill="#10b981"/>
+  <rect x="760" y="396" width="320" height="6" rx="3" fill="#E4E3E0" opacity="0.08"/>
+  <rect x="760" y="396" width="104" height="6" rx="3" fill="#ef4444"/>
+  <rect x="760" y="428" width="320" height="6" rx="3" fill="#E4E3E0" opacity="0.08"/>
+  <rect x="760" y="428" width="210" height="6" rx="3" fill="#f59e0b"/>
+</svg>

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef } from 'react';
 import { DebateAnalysis, ArgumentNode, analyzeDebate } from '../services/geminiService';
 import { useAuth } from './AuthContext';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 // NOTE: All Gemini calls go through the backend /api/* routes.
@@ -26,6 +26,7 @@ interface DiscourseContextType {
   setSelectedNode: (node: ArgumentNode | null) => void;
   isPublishing: boolean;
   isPublished: boolean;
+  shareId: string | null;
   handleAnalyze: () => Promise<void>;
   handlePublish: () => Promise<void>;
   clearAnalysis: () => void;
@@ -56,6 +57,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedNode, setSelectedNode] = useState<ArgumentNode | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(null);
 
   // Voice Analyzer State
   const [isRecording, setIsRecording] = useState(false);
@@ -76,10 +78,28 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!inputText.trim()) return;
     setIsAnalyzing(true);
     setIsPublished(false);
+    setShareId(null);
     try {
       const result = await analyzeDebate(inputText);
       setAnalysis(result);
       setSelectedNode(null);
+
+      // Save to public sharedAnalyses collection for share links (no auth required).
+      // Non-fatal: a failure here must not break the analysis the user just got.
+      try {
+        const id = crypto.randomUUID();
+        await setDoc(doc(db, 'sharedAnalyses', id), {
+          summary: result.summary,
+          nodes: result.nodes,
+          overallScores: result.overallScores,
+          trajectoryInsight: result.trajectoryInsight,
+          bestArguments: result.bestArguments,
+          createdAt: serverTimestamp(),
+        });
+        setShareId(id);
+      } catch (shareErr) {
+        console.error('Failed to create share link:', shareErr);
+      }
 
       // Automatically save to private recordings if logged in
       if (user) {
@@ -129,6 +149,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSelectedNode(null);
     setIsPublished(false);
     setIsAnalyzing(false);
+    setShareId(null);
   };
 
   // Voice Logic
@@ -261,7 +282,7 @@ export const DiscourseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <DiscourseContext.Provider value={{
-      inputText, setInputText, isAnalyzing, analysis, selectedNode, setSelectedNode, isPublishing, isPublished, handleAnalyze, handlePublish, clearAnalysis,
+      inputText, setInputText, isAnalyzing, analysis, selectedNode, setSelectedNode, isPublishing, isPublished, shareId, handleAnalyze, handlePublish, clearAnalysis,
       isRecording, isVoiceAnalyzing, realtimeStatus, realtimeReason, voiceResult, voiceError, recordingTime, stream, startRecording, stopRecording, clearVoiceAnalysis
     }}>
       {children}

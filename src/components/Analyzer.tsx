@@ -108,12 +108,23 @@ export const Analyzer = () => {
     setSelectedNode,
     isPublishing,
     isPublished,
+    shareId,
     handleAnalyze,
     handlePublish,
     clearAnalysis
   } = useDiscourse();
 
   const [showAll, setShowAll] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    if (!shareId) return;
+    const url = `${window.location.origin}/analysis/${shareId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   const sortedNodes = analysis
     ? [...analysis.nodes].sort((a, b) => b.reasoningScore - a.reasoningScore)
@@ -207,7 +218,20 @@ export const Analyzer = () => {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-black/5">
+            <div className="mt-8 pt-6 border-t border-black/5 space-y-2">
+              {shareId && (
+                <button
+                  onClick={handleShare}
+                  className={cn(
+                    "w-full py-3 px-6 font-mono uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 border",
+                    copied
+                      ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                      : "bg-white text-[#141414] border-black/20 hover:border-[#141414]"
+                  )}
+                >
+                  {copied ? <><Check className="w-3 h-3" /> Link Copied!</> : <><Share2 className="w-3 h-3" /> Copy Share Link</>}
+                </button>
+              )}
               {user ? (
                 <button
                   onClick={handlePublish}

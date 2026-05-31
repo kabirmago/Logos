@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -5,6 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
+import fs from "fs";
 
 async function startServer() {
   const app = express();
@@ -160,12 +164,105 @@ Return ONLY valid JSON:
     }
   });
 
+  // Fetch a shared analysis from Firestore (used by both the API and OG tag injection)
+  async function fetchSharedAnalysis(id: string) {
+    const projectId = process.env.VITE_FIREBASE_PROJECT_ID;
+    const dbId = process.env.VITE_FIREBASE_FIRESTORE_DB_ID || '(default)';
+    const apiKey = process.env.VITE_FIREBASE_API_KEY;
+    if (!projectId || !apiKey) return null;
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${dbId}/documents/sharedAnalyses/${encodeURIComponent(id)}?key=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Convert Firestore REST format to plain object
+    function parseValue(v: any): any {
+      if (v.stringValue !== undefined) return v.stringValue;
+      if (v.integerValue !== undefined) return Number(v.integerValue);
+      if (v.doubleValue !== undefined) return v.doubleValue;
+      if (v.booleanValue !== undefined) return v.booleanValue;
+      if (v.timestampValue !== undefined) return v.timestampValue;
+      if (v.nullValue !== undefined) return null;
+      if (v.arrayValue) return (v.arrayValue.values || []).map(parseValue);
+      if (v.mapValue) {
+        const obj: any = {};
+        for (const [k, val] of Object.entries(v.mapValue.fields || {})) obj[k] = parseValue(val);
+        return obj;
+      }
+      return null;
+    }
+    const fields = data.fields || {};
+    const result: any = {};
+    for (const [k, v] of Object.entries(fields)) result[k] = parseValue(v);
+    return result;
+  }
+
+  app.get("/api/analysis/:id", async (req, res) => {
+    try {
+      const analysis = await fetchSharedAnalysis(req.params.id);
+      if (!analysis) return res.status(404).json({ error: "Analysis not found" });
+      res.json(analysis);
+    } catch (e: any) {
+      console.error("Error fetching shared analysis:", e.message);
+      res.status(500).json({ error: "Failed to fetch analysis" });
+    }
+  });
+
   app.all("/api/*", (req, res) => {
     res.status(404).json({ error: "API route not found" });
   });
 
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static("dist"));
+
+    // Inject OG meta tags for shared analysis links so crawlers see them
+    app.get("/analysis/:id", async (req, res) => {
+      try {
+        const analysis = await fetchSharedAnalysis(req.params.id);
+        const baseUrl = (process.env.APP_URL || 'https://logosapp.me').replace(/\/$/, '');
+        const html = fs.readFileSync(path.resolve("dist/index.html"), "utf-8");
+
+        // Truncate BEFORE escaping so we never slice an HTML entity in half.
+        const esc = (s: string) =>
+          s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const summary = typeof analysis?.summary === 'string' ? analysis.summary : '';
+        const title = esc(
+          summary ? `Debate Analysis — ${summary.substring(0, 60)}` : 'Logos — Reasoning Analyzer'
+        );
+        const description = esc(
+          (summary || 'AI-powered debate analysis: argument structure, logical fallacies, and reasoning scores.').substring(0, 200)
+        );
+        const url = esc(`${baseUrl}/analysis/${req.params.id}`);
+        const image = `${baseUrl}/og-image.png`;
+
+        const ogTags = `
+    <title>${title}</title>
+    <meta name="description" content="${description}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Logos" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:url" content="${url}" />
+    <meta property="og:image" content="${image}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Logos — Reasoning Analyzer" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <meta name="twitter:image" content="${image}" />`;
+
+        // Strip the static <title> from the build, then inject our tags before </head>.
+        const injected = html
+          .replace(/<title>.*?<\/title>/i, '')
+          .replace('</head>', `${ogTags}\n  </head>`);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(injected);
+      } catch (e) {
+        res.sendFile(path.resolve("dist/index.html"));
+      }
+    });
+
     app.get("*", (req, res) => {
       res.sendFile(path.resolve("dist/index.html"));
     });

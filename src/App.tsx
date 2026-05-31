@@ -11,6 +11,7 @@ import { VoiceDebate } from './components/VoiceDebate';
 import { Auth } from './components/Auth';
 import { Profile } from './components/Profile';
 import { AdminDashboard } from './components/AdminDashboard';
+import { SharedAnalysis } from './components/SharedAnalysis';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DiscourseProvider } from './context/DiscourseContext';
 import { clsx, type ClassValue } from 'clsx';
@@ -160,6 +161,7 @@ export default function App() {
               <Route path="/methodology" element={<Methodology />} />
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/analysis/:id" element={<SharedAnalysis />} />
             </Routes>
 
             <footer className="max-w-7xl mx-auto p-6 mt-12 border-t border-black/5 flex flex-col md:flex-row justify-between items-center gap-4">

@@ -38,6 +38,14 @@ service cloud.firestore {
              data.constructiveness is number && data.constructiveness >= 0 && data.constructiveness <= 100;
     }
 
+    function isValidSharedAnalysis(data) {
+      return data.keys().hasAll(['summary', 'nodes', 'overallScores', 'createdAt']) &&
+             data.summary is string && data.summary.size() < 5000 &&
+             data.nodes is list && data.nodes.size() <= 300 &&
+             data.overallScores is map &&
+             data.createdAt == request.time;
+    }
+
     function isValidRecording(data) {
       return data.keys().hasAll(['userId', 'title', 'type', 'rawData', 'analysis', 'score', 'constructiveness', 'timestamp']) &&
              data.userId == request.auth.uid &&
@@ -66,7 +74,15 @@ service cloud.firestore {
     match /recordings/{recordingId} {
       allow read, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && isValidRecording(request.resource.data);
-      allow update: if false; // Recordings are immutable for now
+      allow update: if false;
+    }
+
+    // Public, unguessable-ID share links. Anyone can read (no login required to
+    // view a shared analysis) and anyone can create a bounded, well-formed record.
+    match /sharedAnalyses/{analysisId} {
+      allow read: if true;
+      allow create: if isValidSharedAnalysis(request.resource.data);
+      allow update, delete: if false;
     }
   }
 }
