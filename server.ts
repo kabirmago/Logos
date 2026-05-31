@@ -13,6 +13,13 @@ import fs from "fs";
 async function startServer() {
   const app = express();
 
+  // Behind Railway's edge proxy in production: trust exactly one hop so
+  // express-rate-limit reads the real client IP from X-Forwarded-For without
+  // trusting a spoofable, fully-permissive proxy chain.
+  if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
+
   // Generate a fresh nonce per request for inline scripts (if any)
   app.use((req, res, next) => {
     res.locals.nonce = crypto.randomBytes(16).toString("base64");
