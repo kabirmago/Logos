@@ -231,12 +231,24 @@ Return ONLY valid JSON:
         // Truncate BEFORE escaping so we never slice an HTML entity in half.
         const esc = (s: string) =>
           s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const summary = typeof analysis?.summary === 'string' ? analysis.summary : '';
+        // Trim to a word boundary within `max` chars, adding an ellipsis if shortened,
+        // so titles never get sliced mid-word by platform truncation (e.g. iMessage's 2-line cap).
+        const clip = (s: string, max: number) => {
+          const t = s.trim();
+          if (t.length <= max) return t;
+          const cut = t.slice(0, max);
+          const lastSpace = cut.lastIndexOf(' ');
+          const body = lastSpace > max * 0.5 ? cut.slice(0, lastSpace) : cut;
+          return body.replace(/[\s.,;:!?—-]+$/, '') + '…';
+        };
+        const summary = typeof analysis?.summary === 'string' ? analysis.summary.trim() : '';
+        // ~48 chars of summary + the "Debate Analysis — " prefix keeps the whole title
+        // under iMessage's 2-line limit so it stays complete across iMessage/Twitter/LinkedIn.
         const title = esc(
-          summary ? `Debate Analysis — ${summary.substring(0, 60)}` : 'Logos — Reasoning Analyzer'
+          summary ? `Debate Analysis — ${clip(summary, 48)}` : 'Logos — Reasoning Analyzer'
         );
         const description = esc(
-          (summary || 'AI-powered debate analysis: argument structure, logical fallacies, and reasoning scores.').substring(0, 200)
+          summary ? clip(summary, 180) : 'AI-powered debate analysis: argument structure, logical fallacies, and reasoning scores.'
         );
         const url = esc(`${baseUrl}/analysis/${req.params.id}`);
         const image = `${baseUrl}/og-image.png`;
