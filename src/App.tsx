@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { TrendingUp, User as UserIcon, LogIn, ShieldAlert, Menu, X } from 'lucide-react';
-import { Home } from './components/Home';
-import { About } from './components/About';
-import { Leaderboard } from './components/Leaderboard';
-import { RecordingDetail } from './components/RecordingDetail';
-import { Methodology, ApiDocs, Privacy } from './components/StaticPages';
-import { Analyzer } from './components/Analyzer';
-import { VoiceDebate } from './components/VoiceDebate';
-import { Auth } from './components/Auth';
-import { Profile } from './components/Profile';
-import { AdminDashboard } from './components/AdminDashboard';
-import { SharedAnalysis } from './components/SharedAnalysis';
+import { TrendingUp, User as UserIcon, LogIn, ShieldAlert, Menu, X, Loader2 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DiscourseProvider } from './context/DiscourseContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+
+// Route components are lazy-loaded so heavy deps (d3, recharts, framer-motion)
+// are split out of the initial bundle and fetched per route on demand.
+const Home = lazy(() => import('./components/Home').then(m => ({ default: m.Home })));
+const About = lazy(() => import('./components/About').then(m => ({ default: m.About })));
+const Leaderboard = lazy(() => import('./components/Leaderboard').then(m => ({ default: m.Leaderboard })));
+const RecordingDetail = lazy(() => import('./components/RecordingDetail').then(m => ({ default: m.RecordingDetail })));
+const Methodology = lazy(() => import('./components/StaticPages').then(m => ({ default: m.Methodology })));
+const ApiDocs = lazy(() => import('./components/StaticPages').then(m => ({ default: m.ApiDocs })));
+const Privacy = lazy(() => import('./components/StaticPages').then(m => ({ default: m.Privacy })));
+const Analyzer = lazy(() => import('./components/Analyzer').then(m => ({ default: m.Analyzer })));
+const VoiceDebate = lazy(() => import('./components/VoiceDebate').then(m => ({ default: m.VoiceDebate })));
+const Auth = lazy(() => import('./components/Auth').then(m => ({ default: m.Auth })));
+const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const SharedAnalysis = lazy(() => import('./components/SharedAnalysis').then(m => ({ default: m.SharedAnalysis })));
+
+function RouteFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 className="w-6 h-6 animate-spin opacity-40" />
+    </div>
+  );
+}
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -147,6 +160,7 @@ export default function App() {
           <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
             <Navbar />
 
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/analyze" element={<Analyzer />} />
@@ -163,6 +177,7 @@ export default function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/analysis/:id" element={<SharedAnalysis />} />
             </Routes>
+            </Suspense>
 
             <footer className="max-w-7xl mx-auto p-6 mt-12 border-t border-black/5 flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="text-[10px] font-mono uppercase opacity-40">

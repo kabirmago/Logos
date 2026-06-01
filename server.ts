@@ -9,6 +9,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import fs from "fs";
+import { clip, escapeHtml } from "./src/lib/ogText";
 
 async function startServer() {
   const app = express();
@@ -77,10 +78,22 @@ async function startServer() {
   const analyzeLimiter = rateLimit({ windowMs: 60 * 1000, max: 10 });
   const realtimeLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
 
+  // Cap analyze input length: the endpoint is unauthenticated and every call
+  // costs a Gemini request, so guard against oversized/abusive payloads before
+  // spending money. ~50k chars is plenty for a long debate transcript.
+  const MAX_ANALYZE_CHARS = 50_000;
+
   app.post("/api/analyze", analyzeLimiter, async (req, res) => {
     try {
       const { text } = req.body;
-      if (!text) return res.status(400).json({ error: "No text provided" });
+      if (typeof text !== "string" || !text.trim()) {
+        return res.status(400).json({ error: "No text provided" });
+      }
+      if (text.length > MAX_ANALYZE_CHARS) {
+        return res.status(413).json({
+          error: `Text too long (${text.length.toLocaleString()} chars). Max is ${MAX_ANALYZE_CHARS.toLocaleString()}.`,
+        });
+      }
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
@@ -228,29 +241,18 @@ Return ONLY valid JSON:
         const baseUrl = (process.env.APP_URL || 'https://logosapp.me').replace(/\/$/, '');
         const html = fs.readFileSync(path.resolve("dist/index.html"), "utf-8");
 
-        // Truncate BEFORE escaping so we never slice an HTML entity in half.
-        const esc = (s: string) =>
-          s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        // Trim to a word boundary within `max` chars, adding an ellipsis if shortened,
-        // so titles never get sliced mid-word by platform truncation (e.g. iMessage's 2-line cap).
-        const clip = (s: string, max: number) => {
-          const t = s.trim();
-          if (t.length <= max) return t;
-          const cut = t.slice(0, max);
-          const lastSpace = cut.lastIndexOf(' ');
-          const body = lastSpace > max * 0.5 ? cut.slice(0, lastSpace) : cut;
-          return body.replace(/[\s.,;:!?—-]+$/, '') + '…';
-        };
+        // clip() truncates at a word boundary BEFORE escapeHtml() runs, so we
+        // never slice an HTML entity in half and titles never cut mid-word.
         const summary = typeof analysis?.summary === 'string' ? analysis.summary.trim() : '';
         // ~48 chars of summary + the "Debate Analysis — " prefix keeps the whole title
         // under iMessage's 2-line limit so it stays complete across iMessage/Twitter/LinkedIn.
-        const title = esc(
+        const title = escapeHtml(
           summary ? `Debate Analysis — ${clip(summary, 48)}` : 'Logos — Reasoning Analyzer'
         );
-        const description = esc(
+        const description = escapeHtml(
           summary ? clip(summary, 180) : 'AI-powered debate analysis: argument structure, logical fallacies, and reasoning scores.'
         );
-        const url = esc(`${baseUrl}/analysis/${req.params.id}`);
+        const url = escapeHtml(`${baseUrl}/analysis/${req.params.id}`);
         const image = `${baseUrl}/og-image.png`;
 
         const ogTags = `

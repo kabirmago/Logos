@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ArgumentNode } from '../services/geminiService';
 import { EscalationTrajectory } from './EscalationTrajectory';
+import { FallacyChip } from './FallacyChip';
 import { useAuth } from '../context/AuthContext';
 import { useDiscourse } from '../context/DiscourseContext';
 import { Link } from 'react-router-dom';
@@ -386,7 +387,7 @@ export const Analyzer = () => {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {selectedNode.fallacies.map((f, i) => (
-                            <span key={i} className="text-[10px] font-mono bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 rounded">{f}</span>
+                            <FallacyChip key={i} name={f} />
                           ))}
                         </div>
                       </div>

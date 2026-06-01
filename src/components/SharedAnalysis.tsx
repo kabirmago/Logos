@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, AlertTriangle, Loader2, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Loader2, ExternalLink } from 'lucide-react';
 import { ArgumentGraph } from './ArgumentGraph';
 import { EscalationTrajectory } from './EscalationTrajectory';
+import { FallacyChip } from './FallacyChip';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -194,10 +195,8 @@ export const SharedAnalysis: React.FC = () => {
                     </div>
                     {node.fallacies && node.fallacies.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1 pl-6">
-                        {node.fallacies.map((f: string) => (
-                          <span key={f} className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded-sm border border-rose-200">
-                            <AlertTriangle className="w-2.5 h-2.5" />{f}
-                          </span>
+                        {node.fallacies.map((f: string, fi: number) => (
+                          <FallacyChip key={fi} name={f} size="sm" />
                         ))}
                       </div>
                     )}
