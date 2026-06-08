@@ -148,9 +148,11 @@ export const Analyzer = () => {
   // Context-aware message for short debates
   const avgScore = total > 0 ? sortedNodes.reduce((s, n) => s + n.reasoningScore, 0) / total : 0;
   const shortDebateNote = !hasEnoughForSplit && total > 0
-    ? avgScore >= 65
+    ? total <= 4
       ? `Only ${total} argument${total !== 1 ? 's' : ''} found — this was a short debate, but the reasoning quality was high.`
-      : `Only ${total} argument${total !== 1 ? 's' : ''} found — this debate didn't have enough substance to fill both lists.`
+      : avgScore < 30
+        ? `${total} arguments found — argument quality was low overall. Scoring reflects weak reasoning throughout.`
+        : `Only ${total} argument${total !== 1 ? 's' : ''} found — this debate didn't have enough substance to fill both lists.`
     : null;
 
   return (
