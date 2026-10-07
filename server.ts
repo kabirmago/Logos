@@ -273,9 +273,13 @@ Return ONLY valid JSON:
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:image" content="${image}" />`;
 
-        // Strip the static <title> from the build, then inject our tags before </head>.
+        // Strip the static homepage <title>, description, canonical, and og/twitter
+        // tags from the build so the per-analysis tags aren't duplicated, then
+        // inject ours before </head>.
         const injected = html
           .replace(/<title>.*?<\/title>/i, '')
+          .replace(/<meta\s+(?:property="og:[^"]*"|name="twitter:[^"]*"|name="description")[^>]*>\s*/gi, '')
+          .replace(/<link\s+rel="canonical"[^>]*>\s*/gi, '')
           .replace('</head>', `${ogTags}\n  </head>`);
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.send(injected);
